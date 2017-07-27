@@ -22,9 +22,12 @@ from Parameters import Parameters
 class ExecutionerParameters(Parameters):
   def __init__(self):
     Parameters.__init__(self)
+    self.registerBoolParameter("split_source", "Use source-splitting?", False)
 
 class Executioner(object):
   def __init__(self, params, model_type, ics, bcs, eos, interface_closures, gravity, dof_handler, mesh, nonlinear_solver_params, stabilization, factory):
+    self.split_source = params.get("split_source")
+
     self.model_type = model_type
     self.bcs = bcs
     self.eos = eos
@@ -47,9 +50,11 @@ class Executioner(object):
 
     # set local solution update function
     if self.model_type == ModelType.OnePhase:
-      self.computeLocalSolution = self.computeLocalSolutionOnePhase
+      self.computeLocalCellSolution = self.computeLocalCellSolutionOnePhase
+      self.computeLocalNodeSolution = self.computeLocalNodeSolutionOnePhase
     else:
-      self.computeLocalSolution = self.computeLocalSolutionTwoPhase
+      self.computeLocalCellSolution = self.computeLocalCellSolutionTwoPhase
+      self.computeLocalNodeSolution = self.computeLocalNodeSolutionTwoPhase
 
     # create aux quantities
     self.aux_list = self.createIndependentPhaseAuxQuantities(0) \
@@ -61,12 +66,23 @@ class Executioner(object):
       self.aux_list += interface_closures.createAuxQuantities() \
         + stabilization.createPhaseInteractionAuxQuantities()
 
-    # create kernels
-    self.kernels = self.createIndependentPhaseKernels(0) + stabilization.createIndependentPhaseKernels(0)
+    # create list of source kernels
+    self.source_kernels = self.createIndependentPhaseSourceKernels(0)
     if self.model_type != ModelType.OnePhase:
-      self.kernels += self.createIndependentPhaseKernels(1) + stabilization.createIndependentPhaseKernels(1)
+      self.source_kernels += self.createIndependentPhaseSourceKernels(1)
     if self.model_type == ModelType.TwoPhase:
-      self.kernels += self.createPhaseInteractionKernels() + stabilization.createPhaseInteractionKernels()
+      self.source_kernels += self.createPhaseInteractionSourceKernels()
+
+    # create advection kernels
+    self.fem_kernels = self.createIndependentPhaseAdvectionKernels(0) + stabilization.createIndependentPhaseKernels(0)
+    if self.model_type != ModelType.OnePhase:
+      self.fem_kernels += self.createIndependentPhaseAdvectionKernels(1) + stabilization.createIndependentPhaseKernels(1)
+    if self.model_type == ModelType.TwoPhase:
+      self.fem_kernels += self.createPhaseInteractionAdvectionKernels() + stabilization.createPhaseInteractionKernels()
+
+    # add source kernels to kernel lists if not using source-splitting
+    if not self.split_source:
+      self.fem_kernels += self.source_kernels
 
   def initializePhaseSolution(self, ics, phase):
     # get appropriate volume fraction function
@@ -141,33 +157,58 @@ class Executioner(object):
 
     return aux_list
 
-  def createIndependentPhaseKernels(self, phase):
-    kernels = list()
+  def createIndependentPhaseAdvectionKernels(self, phase):
     params = dict()
     params["phase"] = phase
     args = tuple([self.dof_handler])
-    kernel_name_list = ["MassAdvection", "MomentumAdvection", "MomentumGravity", "EnergyAdvection", "EnergyGravity"]
-    for kernel_name in kernel_name_list:
-      kernels.append(self.factory.createObject(kernel_name, params, args))
+
+    kernel_names = ["MassAdvection", "MomentumAdvection", "EnergyAdvection"]
+    kernels = [self.factory.createObject(kernel_name, params, args) for kernel_name in kernel_names]
+
     return kernels
 
-  def createPhaseInteractionKernels(self):
-    kernels = list()
+  def createIndependentPhaseSourceKernels(self, phase):
+    params = dict()
+    params["phase"] = phase
+    if self.split_source:
+      params["is_nodal"] = True
+    args = tuple([self.dof_handler])
 
+    kernel_names = ["MomentumGravity", "EnergyGravity"]
+    kernels = [self.factory.createObject(kernel_name, params, args) for kernel_name in kernel_names]
+
+    return kernels
+
+  def createPhaseInteractionAdvectionKernels(self):
     params1 = dict()
     params2 = dict()
     params1["phase"] = 0
     params2["phase"] = 1
     args = tuple([self.dof_handler])
 
+    kernels = list()
     kernels.append(self.factory.createObject("VolumeFractionAdvection", params1, args))
-    kernels.append(self.factory.createObject("VolumeFractionPressureRelaxation", params1, args))
     kernels.append(self.factory.createObject("MomentumVolumeFractionGradient", params1, args))
     kernels.append(self.factory.createObject("MomentumVolumeFractionGradient", params2, args))
-    kernels.append(self.factory.createObject("EnergyPressureRelaxation", params1, args))
-    kernels.append(self.factory.createObject("EnergyPressureRelaxation", params2, args))
     kernels.append(self.factory.createObject("EnergyVolumeFractionGradient", params1, args))
     kernels.append(self.factory.createObject("EnergyVolumeFractionGradient", params2, args))
+
+    return kernels
+
+  def createPhaseInteractionSourceKernels(self):
+    params1 = dict()
+    params2 = dict()
+    params1["phase"] = 0
+    params2["phase"] = 1
+    if self.split_source:
+      params1["is_nodal"] = True
+      params2["is_nodal"] = True
+    args = tuple([self.dof_handler])
+
+    kernels = list()
+    kernels.append(self.factory.createObject("VolumeFractionPressureRelaxation", params1, args))
+    kernels.append(self.factory.createObject("EnergyPressureRelaxation", params1, args))
+    kernels.append(self.factory.createObject("EnergyPressureRelaxation", params2, args))
 
     return kernels
 
@@ -234,22 +275,22 @@ class Executioner(object):
       data["dx"] = self.mesh.h[elem]
 
       # compute solution
-      self.computeLocalSolution(U, elem, data)
+      self.computeLocalCellSolution(U, elem, data)
 
       # compute auxiliary quantities
       for aux in self.aux_list:
         aux.compute(data, der)
 
       # compute the local residual and Jacobian
-      for kernel in self.kernels:
+      for kernel in self.fem_kernels:
         kernel.apply(data, der, r_cell, J_cell)
 
       # aggregate cell residual and matrix into global residual and matrix
-      self.dof_handler.aggregateLocalVector(r, r_cell, elem)
-      self.dof_handler.aggregateLocalMatrix(J, J_cell, elem)
+      self.dof_handler.aggregateLocalCellVector(r, r_cell, elem)
+      self.dof_handler.aggregateLocalCellMatrix(J, J_cell, elem)
 
-  ## Computes the local solution and gradients for 1-phase flow
-  def computeLocalSolutionOnePhase(self, U, elem, data):
+  ## Computes the local cell solution and gradients for 1-phase flow
+  def computeLocalCellSolutionOnePhase(self, U, elem, data):
     data["vf1"] = self.fe_values.computeLocalVolumeFractionSolution(U, elem)
     data["arho1"] = self.fe_values.computeLocalSolution(U, VariableName.ARho, 0, elem)
     data["arhou1"] = self.fe_values.computeLocalSolution(U, VariableName.ARhoU, 0, elem)
@@ -260,8 +301,18 @@ class Executioner(object):
       data["grad_arhou1"] = self.fe_values.computeLocalSolutionGradient(U, VariableName.ARhoU, 0, elem)
       data["grad_arhoE1"] = self.fe_values.computeLocalSolutionGradient(U, VariableName.ARhoE, 0, elem)
 
-  ## Computes the local solution and gradients for 2-phase flow
-  def computeLocalSolutionTwoPhase(self, U, elem, data):
+  ## Computes the local node solution for 1-phase flow
+  def computeLocalNodeSolutionOnePhase(self, U, k, data):
+    arho1_index = self.dof_handler.arho_index[0]
+    arhou1_index = self.dof_handler.arhou_index[0]
+    arhoE1_index = self.dof_handler.arhoE_index[0]
+    data["vf1"] = self.dof_handler.getVolumeFraction(U, k)
+    data["arho1"] = U[self.dof_handler.i(k, arho1_index)]
+    data["arhou1"] = U[self.dof_handler.i(k, arhou1_index)]
+    data["arhoE1"] = U[self.dof_handler.i(k, arhoE1_index)]
+
+  ## Computes the local cell solution and gradients for 2-phase flow
+  def computeLocalCellSolutionTwoPhase(self, U, elem, data):
     data["vf1"] = self.fe_values.computeLocalVolumeFractionSolution(U, elem)
     data["arho1"] = self.fe_values.computeLocalSolution(U, VariableName.ARho, 0, elem)
     data["arhou1"] = self.fe_values.computeLocalSolution(U, VariableName.ARhoU, 0, elem)
@@ -277,6 +328,22 @@ class Executioner(object):
       data["grad_arho2"] = self.fe_values.computeLocalSolutionGradient(U, VariableName.ARho, 1, elem)
       data["grad_arhou2"] = self.fe_values.computeLocalSolutionGradient(U, VariableName.ARhoU, 1, elem)
       data["grad_arhoE2"] = self.fe_values.computeLocalSolutionGradient(U, VariableName.ARhoE, 1, elem)
+
+  ## Computes the local node solution for 2-phase flow
+  def computeLocalNodeSolutionTwoPhase(self, U, k, data):
+    arho1_index = self.dof_handler.arho_index[0]
+    arhou1_index = self.dof_handler.arhou_index[0]
+    arhoE1_index = self.dof_handler.arhoE_index[0]
+    arho2_index = self.dof_handler.arho_index[1]
+    arhou2_index = self.dof_handler.arhou_index[1]
+    arhoE2_index = self.dof_handler.arhoE_index[1]
+    data["vf1"] = self.dof_handler.getVolumeFraction(U, k)
+    data["arho1"] = U[self.dof_handler.i(k, arho1_index)]
+    data["arhou1"] = U[self.dof_handler.i(k, arhou1_index)]
+    data["arhoE1"] = U[self.dof_handler.i(k, arhoE1_index)]
+    data["arho2"] = U[self.dof_handler.i(k, arho2_index)]
+    data["arhou2"] = U[self.dof_handler.i(k, arhou2_index)]
+    data["arhoE2"] = U[self.dof_handler.i(k, arhoE2_index)]
 
   def solve(self):
     self.nonlinear_solver.solve(self.U)

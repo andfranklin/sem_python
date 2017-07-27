@@ -47,6 +47,7 @@ class TransientExecutioner(Executioner):
     self.end_tolerance = 1e-12
 
     self.U_old = deepcopy(self.U)
+
     self.M = self.computeMassMatrix()
 
   def computeMassMatrix(self):
@@ -91,7 +92,7 @@ class TransientExecutioner(Executioner):
               M_cell[i_arhoE,j_arhoE] += phi[k_local,q] * phi[l_local,q] * JxW[q]
 
       # aggregate cell matrix into global matrix
-      self.dof_handler.aggregateLocalMatrix(M, M_cell, e)
+      self.dof_handler.aggregateLocalCellMatrix(M, M_cell, e)
 
   def addMassMatrixVolumeFraction(self, M):
     phi = self.fe_values.get_phi()
@@ -113,11 +114,44 @@ class TransientExecutioner(Executioner):
               M_cell[i_vf1,j_vf1] += phi[k_local,q] * phi[l_local,q] * JxW[q]
 
       # aggregate cell matrix into global matrix
-      self.dof_handler.aggregateLocalMatrix(M, M_cell, e)
+      self.dof_handler.aggregateLocalCellMatrix(M, M_cell, e)
 
   def assembleTransientSystem(self, U):
-    M_dUdt = np.matmul(self.M, U - self.U_old)
-    return (M_dUdt, self.M)
+    M_dU = np.matmul(self.M, U - self.U_old)
+    return (M_dU, self.M)
+
+  ## Integrates the source terms when source-splitting is used
+  def takeSourceStep(self, U, dt):
+    data = dict()
+    der = dict()
+
+    data["phi"] = np.zeros(shape=(self.dof_handler.n_dof_per_cell_per_var, 1))
+    data["grad_phi"] = np.zeros(shape=(self.dof_handler.n_dof_per_cell_per_var, 1))
+    data["phi"].fill(1.0)
+    data["grad_phi"].fill(float("NaN"))
+    data["JxW"] = 1.0
+    data["g"] = self.gravity
+
+    n_var = self.dof_handler.n_var
+
+    # loop over nodes
+    for k in xrange(self.dof_handler.n_node):
+      r_node = np.zeros(n_var)
+      J_node = np.zeros(shape=(n_var, n_var))
+
+      # compute solution
+      self.computeLocalNodeSolution(U, k, data)
+
+      # compute auxiliary quantities
+      for aux in self.aux_list:
+        aux.compute(data, der)
+
+      # compute the local residual and Jacobian
+      for kernel in self.source_kernels:
+        kernel.apply(data, der, r_node, J_node)
+
+      # add integrated source (recall kernels assume LHS)
+      self.dof_handler.aggregateLocalNodeVector(U, -dt * r_node, k)
 
   def createCFLAuxQuantities(self):
     aux_list = list()
@@ -208,6 +242,13 @@ class TransientExecutioner(Executioner):
         # report failure and exit transient
         print colored("Time step failed.", "red")
         return self.U_old
+
+      # perform source term integration
+      if self.split_source:
+        self.takeSourceStep(self.U, self.dt)
+
+      # store the old solution
+      self.U_old = deepcopy(self.U)
 
       # save old solution and increment time step index
       self.U_old = deepcopy(self.U)

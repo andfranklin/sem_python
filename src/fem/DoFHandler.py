@@ -108,13 +108,21 @@ class DoFHandler(object):
     arhoE = self.getSolution(U, VariableName.ARhoE, phase)
     return (vf, arho, arhou, arhoE)
 
-  # aggregates local vector into global vector
-  def aggregateLocalVector(self, r, r_cell, e):
+  # aggregates local cell vector into global vector
+  def aggregateLocalCellVector(self, r, r_cell, e):
     r[e * self.n_var : (e+2) * self.n_var] += r_cell
 
-  # aggregates local matrix into global matrix
-  def aggregateLocalMatrix(self, J, J_cell, e):
+  # aggregates local node vector into global vector
+  def aggregateLocalNodeVector(self, r, r_node, k):
+    r[k * self.n_var : (k+1) * self.n_var] += r_node
+
+  # aggregates local cell matrix into global matrix
+  def aggregateLocalCellMatrix(self, J, J_cell, e):
     J[e * self.n_var : (e+2) * self.n_var, e * self.n_var : (e+2) * self.n_var] += J_cell
+
+  # aggregates local node matrix into global matrix
+  def aggregateLocalNodeMatrix(self, J, J_node, k):
+    J[k * self.n_var : (k+1) * self.n_var, k * self.n_var : (k+1) * self.n_var] += J_node
 
   ## Applies scaling factors to the nonlinear residual based on variable
   # @param[in,out] r  nonlinear residual vector to modify
