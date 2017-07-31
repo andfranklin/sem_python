@@ -12,8 +12,8 @@ class ImplicitEulerExecutionerParameters(TransientExecutionerParameters):
     TransientExecutionerParameters.__init__(self)
 
 class ImplicitEulerExecutioner(TransientExecutioner):
-  def __init__(self, params, model_type, ics, bcs, eos_map, interface_closures, gravity, dof_handler, mesh, nonlinear_solver_params, factory):
-    TransientExecutioner.__init__(self, params, model_type, ics, bcs, eos_map, interface_closures, gravity, dof_handler, mesh, nonlinear_solver_params, factory)
+  def __init__(self, params, model, ics, bcs, eos_map, interface_closures, gravity, dof_handler, mesh, nonlinear_solver_params, factory):
+    TransientExecutioner.__init__(self, params, model, ics, bcs, eos_map, interface_closures, gravity, dof_handler, mesh, nonlinear_solver_params, factory)
 
   def assembleSystem(self, U):
     r_tr, J_tr = self.assembleTransientSystem(U)

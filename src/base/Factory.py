@@ -20,6 +20,10 @@ from Theta import Theta, ThetaParameters
 from InterfaceVelocity import InterfaceVelocity, InterfaceVelocityParameters
 from InterfacePressure import InterfacePressure, InterfacePressureParameters
 
+# base
+sys.path.append(base_dir + "src/base")
+from Model import Model, ModelParameters
+
 # bc
 sys.path.append(base_dir + "src/bc")
 from FreeBC import FreeBC, FreeBCParameters

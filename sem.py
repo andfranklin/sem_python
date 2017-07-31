@@ -51,13 +51,10 @@ def run(input_file, mods=list()):
   # create the factory
   factory = Factory()
 
-  # model type
-  model_string_to_type = {"1phase": ModelType.OnePhase,
-                          "2phase_noninteracting" : ModelType.TwoPhaseNonInteracting,
-                          "2phase": ModelType.TwoPhase}
+  # model
   model_param_data = input_file_parser.getBlockData("Model")
-  model_params = factory.createParametersObject("Model", model_param_data)
-  model_type = model_string_to_type[model_params.get("model")]
+  model = factory.createObject("Model", model_param_data)
+  model_type = model.type
 
   # mesh
   mesh_param_data = input_file_parser.getBlockData("Mesh")
@@ -126,7 +123,7 @@ def run(input_file, mods=list()):
   # create and run the executioner
   executioner_param_data = input_file_parser.getBlockData("Executioner")
   executioner_type = executioner_param_data["type"]
-  executioner_args = (model_type, ics, bcs, eos, interface_closures, gravity, dof_handler, mesh, nonlinear_solver_params, factory)
+  executioner_args = (model, ics, bcs, eos, interface_closures, gravity, dof_handler, mesh, nonlinear_solver_params, factory)
   executioner = factory.createObject(executioner_type, executioner_param_data, executioner_args)
   U = executioner.run()
 

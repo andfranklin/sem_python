@@ -83,6 +83,7 @@ class Parameters(object):
     self.types[name] = "list"
 
   def registerBoolParameter(self, name, description, default=None):
+    print name
     self.registerParameterInternal(name, "bool", description, default)
 
   def registerIntParameter(self, name, description, default=None):
@@ -101,6 +102,7 @@ class Parameters(object):
     self.registerParameterInternal(name, "parsed_function", description, default)
 
   def registerStringParameter(self, name, description, default=None):
+    print name
     self.registerParameterInternal(name, "string", description, default)
 
   ## Registers a string parameter that has a selection of values

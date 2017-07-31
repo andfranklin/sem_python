@@ -21,8 +21,8 @@ class TransientExecutionerParameters(ExecutionerParameters):
     self.registerFloatParameter("end_time", "End time")
 
 class TransientExecutioner(Executioner):
-  def __init__(self, params, model_type, ics, bcs, eos_map, interface_closures, gravity, dof_handler, mesh, nonlinear_solver_params, factory):
-    Executioner.__init__(self, params, model_type, ics, bcs, eos_map, interface_closures, gravity, dof_handler, mesh, nonlinear_solver_params, factory)
+  def __init__(self, params, model, ics, bcs, eos_map, interface_closures, gravity, dof_handler, mesh, nonlinear_solver_params, factory):
+    Executioner.__init__(self, params, model, ics, bcs, eos_map, interface_closures, gravity, dof_handler, mesh, nonlinear_solver_params, factory)
     self.dt_nominal = params.get("dt")
     self.end_time = params.get("end_time")
     self.U_old = deepcopy(self.U)

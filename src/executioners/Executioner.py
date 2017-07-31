@@ -24,8 +24,9 @@ class ExecutionerParameters(Parameters):
     Parameters.__init__(self)
 
 class Executioner(object):
-  def __init__(self, params, model_type, ics, bcs, eos, interface_closures, gravity, dof_handler, mesh, nonlinear_solver_params, factory):
-    self.model_type = model_type
+  def __init__(self, params, model, ics, bcs, eos, interface_closures, gravity, dof_handler, mesh, nonlinear_solver_params, factory):
+    self.model = model
+    self.model_type = self.model.type
     self.bcs = bcs
     self.eos = eos
     self.interface_closures = interface_closures
