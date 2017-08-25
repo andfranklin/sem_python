@@ -21,10 +21,10 @@ class CloneJunction(Junction):
     self.i_master = [self.dof_handler.i(self.k_master, m) for m in self.variable_indices]
     self.i_slave = [self.dof_handler.i(self.k_slave, m) for m in self.variable_indices]
 
-  def applyWeaklyToNonlinearSystem(self, U, r, J):
+  def applyWeaklyToNonlinearSystem(self, U, U_old, r, J):
     pass
 
-  def applyStronglyToNonlinearSystem(self, U, r, J):
+  def applyStronglyToNonlinearSystem(self, U, U_old, r, J):
     # add slave node residuals and Jacobians to master node
     r[self.i_master] += r[self.i_slave]
     r[self.i_slave] = 0

@@ -32,10 +32,10 @@ class Junction(object):
       else:
         error("Side parameters must be either 'left' or 'right'.")
 
-  def applyWeaklyToNonlinearSystem(self, U, r, J):
+  def applyWeaklyToNonlinearSystem(self, U, U_old, r, J):
     pass
 
-  def applyStronglyToNonlinearSystem(self, U, r, J):
+  def applyStronglyToNonlinearSystem(self, U, U_old, r, J):
     pass
 
   def applyStronglyToLinearSystemMatrix(self, A):
