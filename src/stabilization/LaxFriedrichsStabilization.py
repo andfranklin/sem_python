@@ -33,7 +33,10 @@ class LaxFriedrichsStabilization(Stabilization):
 
       # gradients
       aux_gradient_names = ["vf", "rho", "u", "rhoe"]
-      variable_names = ["vf1", "arho1", "arhou1", "arhoE1", "arho2", "arhou2", "arhoE2"]
+      if phase == 0:
+        variable_names = ["vf1", "arho1", "arhou1", "arhoE1"]
+      else:
+        variable_names = ["vf1", "arho2", "arhou2", "arhoE2"]
       for aux_gradient_name in aux_gradient_names:
         params = {"aux": aux_gradient_name + str(phase + 1), "variable_names": variable_names}
         aux_list.append(self.factory.createObject("AuxGradient", params))
