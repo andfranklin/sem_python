@@ -72,6 +72,7 @@ from PhysicsParameters import PhysicsParameters
 
 # junctions
 from CloneJunction import CloneJunction, CloneJunctionParameters
+from CompressibleJunction import CompressibleJunction, CompressibleJunctionParameters
 
 # kernels
 from DissipationAuxFlux import DissipationAuxFlux, DissipationAuxFluxParameters
