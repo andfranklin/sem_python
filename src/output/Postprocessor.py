@@ -18,7 +18,7 @@ class PostprocessorParameters(Parameters):
     self.registerStringParameter("plot_file", "Name of plot file", "solution.pdf")
 
     self.registerParameter("model", "Model")
-    self.registerParameter("eos", "Equation of state")
+    self.registerParameter("eos_list", "List of equations of state")
     self.registerParameter("dof_handler", "Degree of freedom handler")
     self.registerParameter("meshes", "List of meshes")
 
@@ -33,7 +33,7 @@ class Postprocessor(object):
 
     model = params.get("model")
     self.model_type = model.model_type
-    self.eos = params.get("eos")
+    self.eos_list = params.get("eos_list")
     self.dof_handler = params.get("dof_handler")
     self.meshes = params.get("meshes")
 
@@ -49,7 +49,7 @@ class Postprocessor(object):
     v1 = computeSpecificVolume(rho1)[0]
     E1 = computeSpecificTotalEnergy(arho1, arhoE1)[0]
     e1 = computeSpecificInternalEnergy(u1, E1)[0]
-    eos1 = self.eos[0]
+    eos1 = self.eos_list[0]
     p1 = eos1.p(v1, e1)[0]
     T1 = eos1.T(v1, e1)[0]
     if (self.model_type != ModelType.OnePhase):
@@ -58,7 +58,7 @@ class Postprocessor(object):
       v2 = computeSpecificVolume(rho2)[0]
       E2 = computeSpecificTotalEnergy(arho2, arhoE2)[0]
       e2 = computeSpecificInternalEnergy(u2, E2)[0]
-      eos2 = self.eos[1]
+      eos2 = self.eos_list[1]
       p2 = eos2.p(v2, e2)[0]
       T2 = eos2.T(v2, e2)[0]
 

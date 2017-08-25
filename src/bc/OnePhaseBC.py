@@ -10,7 +10,7 @@ class OnePhaseBC(BC):
   def __init__(self, params):
     BC.__init__(self, params)
     self.phase = params.get("phase")
-    self.eos = params.get("eos")[self.phase]
+    self.eos = self.eos_list[self.phase]
 
     # DoF indices for the conserved variables
     if (self.model_type == ModelType.TwoPhase):

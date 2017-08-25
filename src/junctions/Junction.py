@@ -7,6 +7,7 @@ class JunctionParameters(Parameters):
     self.registerStringListParameter("mesh_names", "List of names of the meshes to be connected")
     self.registerStringListParameter("mesh_sides", "List of sides of the meshes to be connected")
     self.registerParameter("dof_handler", "Degree of freedom handler")
+    self.registerParameter("eos_list", "List of equations of state")
 
 ## Base class for a junction between meshes
 class Junction(object):
@@ -14,6 +15,7 @@ class Junction(object):
     self.mesh_names = params.get("mesh_names")
     self.mesh_sides = params.get("mesh_sides")
     self.dof_handler = params.get("dof_handler")
+    self.eos_list = params.get("eos_list")
 
     self.model_type = self.dof_handler.model_type
 

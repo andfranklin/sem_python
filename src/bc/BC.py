@@ -6,14 +6,14 @@ class BCParameters(Parameters):
     self.registerStringParameter("mesh_name", "Name of the mesh for which this BC applies")
     self.registerStringSelectionParameter("boundary", ["left", "right"], "Which boundary to apply boundary condition on")
     self.registerParameter("dof_handler", "Degree of freedom handler")
-    self.registerParameter("eos", "Equation of state")
+    self.registerParameter("eos_list", "List of equations of state")
 
 class BC(object):
   def __init__(self, params):
     self.mesh_name = params.get("mesh_name")
     self.boundary = params.get("boundary")
     self.dof_handler = params.get("dof_handler")
-    self.eos = params.get("eos")
+    self.eos_list = params.get("eos_list")
 
     self.model_type = self.dof_handler.model_type
     if self.boundary == "left":

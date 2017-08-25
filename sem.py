@@ -93,13 +93,13 @@ def run(input_file, mods=list()):
   else:
     if len(eos_subblocks) != 2:
       error("Two-phase flow should have exactly 2 equations of state.")
-  eos = list()
+  eos_list = list()
   phase_name_to_index = dict()
   for k, eos_subblock in enumerate(eos_subblocks):
     phase_name_to_index[eos_subblock] = k
     eos_param_data = input_file_parser.getSubblockData("EoS", eos_subblock)
     eos_class = eos_param_data["type"]
-    eos.append(factory.createObject(eos_class, eos_param_data))
+    eos_list.append(factory.createObject(eos_class, eos_param_data))
 
   # initial conditions / initial guess
   ic_param_data = input_file_parser.getBlockData("IC")
@@ -134,7 +134,7 @@ def run(input_file, mods=list()):
     if "phase" in bc_param_data:
       bc_param_data["phase"] = phase_name_to_index[bc_param_data["phase"]]
     bc_param_data["dof_handler"] = dof_handler
-    bc_param_data["eos"] = eos
+    bc_param_data["eos_list"] = eos_list
 
     bc = factory.createObject(bc_class, bc_param_data)
     bcs.append(bc)
@@ -146,7 +146,10 @@ def run(input_file, mods=list()):
     for junction_subblock in junction_subblocks:
       junction_param_data = input_file_parser.getSubblockData("Junctions", junction_subblock)
       junction_class = junction_param_data["type"]
+      if "phase" in junction_param_data:
+        junction_param_data["phase"] = phase_name_to_index[junction_param_data["phase"]]
       junction_param_data["dof_handler"] = dof_handler
+      junction_param_data["eos_list"] = eos_list
 
       junction = factory.createObject(junction_class, junction_param_data)
       junctions.append(junction)
@@ -187,7 +190,7 @@ def run(input_file, mods=list()):
   executioner_param_data["ics"] = ics
   executioner_param_data["bcs"] = bcs
   executioner_param_data["junctions"] = junctions
-  executioner_param_data["eos"] = eos
+  executioner_param_data["eos_list"] = eos_list
   executioner_param_data["interface_closures"] = interface_closures
   executioner_param_data["gravity"] = gravity
   executioner_param_data["dof_handler"] = dof_handler
@@ -201,7 +204,7 @@ def run(input_file, mods=list()):
   # create and run the postprocessor
   postprocessor_param_data = input_file_parser.getBlockData("Output")
   postprocessor_param_data["model"] = model
-  postprocessor_param_data["eos"] = eos
+  postprocessor_param_data["eos_list"] = eos_list
   postprocessor_param_data["dof_handler"] = dof_handler
   postprocessor_param_data["meshes"] = meshes
   postprocessor = factory.createObject("Postprocessor", postprocessor_param_data)

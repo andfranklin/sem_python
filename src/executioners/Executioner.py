@@ -13,7 +13,7 @@ class ExecutionerParameters(Parameters):
     self.registerParameter("ics", "Initial conditions")
     self.registerParameter("bcs", "Boundary conditions")
     self.registerParameter("junctions", "List of junctions")
-    self.registerParameter("eos", "Equation of state map")
+    self.registerParameter("eos_list", "List of equations of state")
     self.registerParameter("interface_closures", "Interface closures")
     self.registerFloatParameter("gravity", "Acceleration due to gravity")
     self.registerParameter("dof_handler", "Degree of freedom handler")
@@ -29,7 +29,7 @@ class Executioner(object):
     self.model_type = self.model.model_type
     self.bcs = params.get("bcs")
     self.junctions = params.get("junctions")
-    self.eos = params.get("eos")
+    self.eos_list = params.get("eos_list")
     interface_closures = params.get("interface_closures")
     self.gravity = params.get("gravity")
     self.dof_handler = params.get("dof_handler")
@@ -101,7 +101,7 @@ class Executioner(object):
       initial_T = ics.T[phase]
 
     # compute IC
-    eos_phase = self.eos[phase]
+    eos_phase = self.eos_list[phase]
     arho_index = self.dof_handler.variable_index[VariableName.ARho][phase]
     arhou_index = self.dof_handler.variable_index[VariableName.ARhoU][phase]
     arhoE_index = self.dof_handler.variable_index[VariableName.ARhoE][phase]
@@ -143,11 +143,11 @@ class Executioner(object):
     for aux_name in aux_names_phase:
       params = {"phase": phase}
       if aux_name == "Pressure":
-        params["p_function"] = self.eos[phase].p
+        params["p_function"] = self.eos_list[phase].p
       elif aux_name == "Temperature":
-        params["T_function"] = self.eos[phase].T
+        params["T_function"] = self.eos_list[phase].T
       elif aux_name == "SoundSpeed":
-        params["c_function"] = self.eos[phase].c
+        params["c_function"] = self.eos_list[phase].c
       aux_list.append(self.factory.createObject(aux_name, params))
 
     return aux_list
