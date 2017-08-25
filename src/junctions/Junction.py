@@ -22,13 +22,16 @@ class Junction(object):
     if len(self.mesh_names) != len(self.mesh_sides):
       error("The list parameters 'mesh_names' and 'mesh_sides' must have the same size.")
 
-    # get node indices
+    # get node indices and adjacent node indices
     self.node_indices = list()
+    self.adjacent_node_indices = list()
     for i, mesh_name in enumerate(self.mesh_names):
       if self.mesh_sides[i] == "left":
-        self.node_indices.append(self.dof_handler.getLeftNodeIndex(mesh_name))
+        self.node_indices.append(self.dof_handler.getNodeIndexFromLeft(mesh_name, 0))
+        self.adjacent_node_indices.append(self.dof_handler.getNodeIndexFromLeft(mesh_name, 1))
       elif self.mesh_sides[i] == "right":
-        self.node_indices.append(self.dof_handler.getRightNodeIndex(mesh_name))
+        self.node_indices.append(self.dof_handler.getNodeIndexFromRight(mesh_name, 0))
+        self.adjacent_node_indices.append(self.dof_handler.getNodeIndexFromRight(mesh_name, 1))
       else:
         error("Side parameters must be either 'left' or 'right'.")
 

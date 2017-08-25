@@ -25,8 +25,6 @@ class DoFHandler(object):
     # create the x-position array, element-size array, and element-index to mesh-index array
     n_meshes = len(self.meshes)
     self.mesh_name_to_mesh_index = dict()
-    self.k_left = [0] * n_meshes
-    self.k_right = [0] * n_meshes
     self.x = np.zeros(self.n_node)
     self.h = np.zeros(self.n_cell)
     self.elem_to_mesh_index = [0] * self.n_cell
@@ -36,8 +34,6 @@ class DoFHandler(object):
       self.mesh_name_to_mesh_index[mesh.name] = i_mesh
       mesh_n_node = mesh.n_cell + 1
       k_end = k_begin + mesh_n_node - 1
-      self.k_left[i_mesh] = k_begin
-      self.k_right[i_mesh] = k_end
       elem_end = elem_begin + mesh.n_cell - 1
       self.x[k_begin:k_end+1] = mesh.x
       self.h[elem_begin:elem_end+1] = mesh.h
@@ -124,17 +120,27 @@ class DoFHandler(object):
   def k(self, e, k_local):
     return e + k_local + self.elem_to_mesh_index[e]
 
-  ## Returns the left node index for a mesh
+  ## Returns a node index for a mesh, counted from the left
   # @param[in] mesh_name  name of the mesh
-  def getLeftNodeIndex(self, mesh_name):
+  # @param[in] k_i  node index of a mesh, counted from the left
+  def getNodeIndexFromLeft(self, mesh_name, k_i):
     i_mesh = self.mesh_name_to_mesh_index[mesh_name]
-    return self.k_left[i_mesh]
+    k = 0
+    for i in xrange(i_mesh):
+      k += self.meshes[i].n_cell + 1
+    k += k_i
+    return k
 
-  ## Returns the right node index for a mesh
+  ## Returns a node index for a mesh, counted from the right
   # @param[in] mesh_name  name of the mesh
-  def getRightNodeIndex(self, mesh_name):
+  # @param[in] k_i  node index of a mesh, counted from the right
+  def getNodeIndexFromRight(self, mesh_name, k_i):
     i_mesh = self.mesh_name_to_mesh_index[mesh_name]
-    return self.k_right[i_mesh]
+    k = 0
+    for i in xrange(i_mesh + 1):
+      k += self.meshes[i].n_cell + 1
+    k -= (k_i + 1)
+    return k
 
   ## Converts variable enum to its string name with phase index
   # @param[in] var  variable enum

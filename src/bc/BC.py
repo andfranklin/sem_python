@@ -18,10 +18,10 @@ class BC(object):
     self.model_type = self.dof_handler.model_type
     if self.boundary == "left":
       self.nx = -1.0
-      self.k = self.dof_handler.getLeftNodeIndex(self.mesh_name)
+      self.k = self.dof_handler.getNodeIndexFromLeft(self.mesh_name, 0)
     else:
       self.nx = 1.0
-      self.k = self.dof_handler.getRightNodeIndex(self.mesh_name)
+      self.k = self.dof_handler.getNodeIndexFromRight(self.mesh_name, 0)
 
   def applyWeakBC(self, U, r, J):
     pass
